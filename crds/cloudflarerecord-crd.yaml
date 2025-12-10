@@ -1,0 +1,109 @@
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  name: cloudflarerecords.cloudflare.example.com
+spec:
+  group: cloudflare.example.com
+  versions:
+    - name: v1
+      served: true
+      storage: true
+      schema:
+        openAPIV3Schema:
+          type: object
+          properties:
+            spec:
+              type: object
+              required:
+                - zoneId
+                - name
+                - type
+                - content
+              properties:
+                zoneId:
+                  type: string
+                  description: "Cloudflare Zone ID"
+                name:
+                  type: string
+                  description: "DNS record name (e.g., www.example.com)"
+                type:
+                  type: string
+                  description: "DNS record type (A, AAAA, CNAME, TXT, etc.)"
+                  enum:
+                    - A
+                    - AAAA
+                    - CNAME
+                    - TXT
+                    - MX
+                    - NS
+                    - SRV
+                    - CAA
+                content:
+                  type: string
+                  description: "DNS record content/value"
+                ttl:
+                  type: integer
+                  description: "Time to live (1 = automatic)"
+                  default: 1
+                proxied:
+                  type: boolean
+                  description: "Whether the record is receiving the performance and security benefits of Cloudflare"
+                  default: false
+                priority:
+                  type: integer
+                  description: "Priority for MX/SRV records"
+                comment:
+                  type: string
+                  description: "Comments or notes about the DNS record"
+            status:
+              type: object
+              properties:
+                recordId:
+                  type: string
+                  description: "Cloudflare DNS record ID"
+                state:
+                  type: string
+                  description: "Current state of the DNS record"
+                  enum:
+                    - Pending
+                    - Active
+                    - Error
+                message:
+                  type: string
+                  description: "Status message"
+                lastSync:
+                  type: string
+                  format: date-time
+                  description: "Last synchronization time"
+      subresources:
+        status: {}
+      additionalPrinterColumns:
+        - name: Zone
+          type: string
+          jsonPath: .spec.zoneId
+        - name: Record Name
+          type: string
+          jsonPath: .spec.name
+        - name: Type
+          type: string
+          jsonPath: .spec.type
+        - name: Content
+          type: string
+          jsonPath: .spec.content
+        - name: Proxied
+          type: boolean
+          jsonPath: .spec.proxied
+        - name: State
+          type: string
+          jsonPath: .status.state
+        - name: Age
+          type: date
+          jsonPath: .metadata.creationTimestamp
+  scope: Namespaced
+  names:
+    plural: cloudflarerecords
+    singular: cloudflarerecord
+    kind: CloudflareRecord
+    shortNames:
+      - cfr
+      - cfrecord

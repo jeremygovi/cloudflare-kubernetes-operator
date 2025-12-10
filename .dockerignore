@@ -1,0 +1,21 @@
+# Git
+.git
+.gitignore
+
+# Node
+node_modules
+npm-debug.log
+
+# Build outputs
+dist
+
+# Environment
+.env
+.env.local
+
+# IDE
+.vscode
+.idea
+
+# npm credentials (important for security)
+.npmrc

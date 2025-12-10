@@ -1,0 +1,13 @@
+apiVersion: cloudflare.example.com/v1
+kind: CloudflareRecord
+metadata:
+  name: api-cname
+  namespace: default
+spec:
+  zoneId: "abcd1234"
+  name: "api.example.com"
+  type: "CNAME"
+  content: "api-backend.example.com"
+  ttl: 1
+  proxied: false
+  comment: "API endpoint CNAME record"

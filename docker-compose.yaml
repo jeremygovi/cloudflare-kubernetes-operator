@@ -1,0 +1,22 @@
+version: "3.8"
+
+services:
+  cloudflare-operator:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: cloudflare-kubernetes-operator:latest
+    container_name: cloudflare-operator
+    environment:
+      - CLOUDFLARE_API_TOKEN=${CLOUDFLARE_API_TOKEN}
+      - CLOUDFLARE_ACCOUNT_ID=${CLOUDFLARE_ACCOUNT_ID}
+      - LOG_LEVEL=${LOG_LEVEL:-info}
+    volumes:
+      # Mount kubeconfig for local development
+      - ~/.kube/config:/home/operator/.kube/config:ro
+    networks:
+      - operator-network
+
+networks:
+  operator-network:
+    driver: bridge

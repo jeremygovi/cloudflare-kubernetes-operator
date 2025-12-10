@@ -1,0 +1,13 @@
+apiVersion: cloudflare.example.com/v1
+kind: CloudflareRecord
+metadata:
+  name: www-example
+  namespace: default
+spec:
+  zoneId: "abcd1234"
+  name: "www.example.com"
+  type: "A"
+  content: "1.2.3.4"
+  ttl: 3600
+  proxied: true
+  comment: "Main website A record"

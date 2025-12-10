@@ -1,0 +1,28 @@
+apiVersion: cloudflare.example.com/v1
+kind: CloudflareRuleset
+metadata:
+  name: redirect-rules
+  namespace: default
+spec:
+  zoneId: "abcd1234"
+  name: "Redirect Rules"
+  description: "URL redirects for legacy paths"
+  phase: "http_request_transform"
+  rules:
+    - action: "redirect"
+      expression: "(http.request.uri.path eq \"/old-path\")"
+      description: "Redirect old path to new location"
+      enabled: true
+      actionParameters:
+        fromValue:
+          statusCode: 301
+          targetUrl:
+            value: "https://example.com/new-path"
+    - action: "rewrite"
+      expression: "(http.request.uri.path matches \"^/api/v1/(.*)$\")"
+      description: "Rewrite API v1 to v2"
+      enabled: true
+      actionParameters:
+        uri:
+          path:
+            value: "/api/v2/${1}"
