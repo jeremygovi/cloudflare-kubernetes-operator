@@ -13,7 +13,7 @@ export class CloudflareOperator {
 
   constructor() {
     this.kubeConfig = new KubeConfig();
-    
+
     // Load kubeconfig (in-cluster or from file)
     if (process.env.KUBERNETES_SERVICE_HOST) {
       logger.info('Running in-cluster, loading in-cluster config');

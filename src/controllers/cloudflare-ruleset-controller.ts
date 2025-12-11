@@ -62,7 +62,7 @@ export class CloudflareRulesetController {
     } else {
       kc.loadFromDefault();
     }
-    
+
     this.watcher = new Watch(kc);
     this.abortController = new AbortController();
 
@@ -98,7 +98,6 @@ export class CloudflareRulesetController {
   private async handleEvent(type: string, resource: CloudflareRulesetResource) {
     const { metadata, spec } = resource;
     logger.info(`Event ${type} for CloudflareRuleset ${metadata.namespace}/${metadata.name}`);
-
     try {
       switch (type) {
         case 'ADDED':
@@ -123,7 +122,6 @@ export class CloudflareRulesetController {
   private async reconcile(resource: CloudflareRulesetResource) {
     const { metadata, spec, status } = resource;
     logger.info(`Reconciling CloudflareRuleset ${metadata.namespace}/${metadata.name}`);
-
     try {
       const rulesetData = {
         name: spec.name || `k8s-${metadata.name}`,
@@ -143,7 +141,6 @@ export class CloudflareRulesetController {
       if (status?.rulesetId) {
         // Update existing ruleset
         logger.info(`Updating ruleset ${status.rulesetId} in zone ${spec.zoneId}`);
-        
         await (this.cloudflare as any).zones.rulesets.update(
           spec.zoneId,
           status.rulesetId,
@@ -159,7 +156,6 @@ export class CloudflareRulesetController {
       } else {
         // Create new ruleset
         logger.info(`Creating ruleset in zone ${spec.zoneId}`);
-        
         const response: any = await (this.cloudflare as any).zones.rulesets.create(
           spec.zoneId,
           rulesetData

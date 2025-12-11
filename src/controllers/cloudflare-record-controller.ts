@@ -53,7 +53,7 @@ export class CloudflareRecordController {
     } else {
       kc.loadFromDefault();
     }
-    
+
     this.watcher = new Watch(kc);
     this.abortController = new AbortController();
 
@@ -120,7 +120,7 @@ export class CloudflareRecordController {
       if (status?.recordId) {
         // Update existing record
         logger.info(`Updating DNS record ${status.recordId} in zone ${spec.zoneId}`);
-        
+
         await this.cloudflare.dns.records.edit(
           status.recordId,
           {
@@ -144,7 +144,7 @@ export class CloudflareRecordController {
       } else {
         // Create new record
         logger.info(`Creating DNS record ${spec.name} in zone ${spec.zoneId}`);
-        
+
         const response: any = await this.cloudflare.dns.records.create({
           zone_id: spec.zoneId,
           name: spec.name,

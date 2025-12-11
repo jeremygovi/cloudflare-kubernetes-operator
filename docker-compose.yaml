@@ -14,9 +14,5 @@ services:
     volumes:
       # Mount kubeconfig for local development
       - ~/.kube/config:/home/operator/.kube/config:ro
-    networks:
-      - operator-network
-
-networks:
-  operator-network:
-    driver: bridge
+    # Use host network to access kind cluster
+    network_mode: "host"

@@ -7,6 +7,8 @@ WORKDIR /app
 COPY package*.json ./
 COPY tsconfig.json ./
 
+COPY .npmrc ./
+
 # Install dependencies
 RUN npm install
 
@@ -23,6 +25,7 @@ WORKDIR /app
 
 # Copy package files
 COPY package*.json ./
+COPY .npmrc ./
 
 # Install only production dependencies
 RUN npm install --omit=dev

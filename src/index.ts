@@ -11,11 +11,11 @@ function displayHelp() {
   console.log('\n📦 Cloudflare Kubernetes Operator\n');
   console.log('Manage Cloudflare resources directly from Kubernetes\n');
   console.log('Available commands:\n');
-  
+
   Object.entries(COMMANDS).forEach(([cmd, desc]) => {
     console.log(`  ${cmd.padEnd(15)} ${desc}`);
   });
-  
+
   console.log('\nEnvironment variables:');
   console.log('  CLOUDFLARE_API_TOKEN    Required: Cloudflare API token');
   console.log('  LOG_LEVEL              Optional: Log level (debug, info, warn, error)');

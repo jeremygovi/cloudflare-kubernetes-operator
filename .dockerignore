@@ -17,5 +17,3 @@ dist
 .vscode
 .idea
 
-# npm credentials (important for security)
-.npmrc
