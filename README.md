@@ -94,7 +94,7 @@ make help
 ### CloudflareRecord - Enregistrement A
 
 ```yaml
-apiVersion: cloudflare.example.com/v1
+apiVersion: cloudflare.k8s.io/v1
 kind: CloudflareRecord
 metadata:
   name: www-example
@@ -112,7 +112,7 @@ spec:
 ### CloudflareRuleset - Règles de sécurité
 
 ```yaml
-apiVersion: cloudflare.example.com/v1
+apiVersion: cloudflare.k8s.io/v1
 kind: CloudflareRuleset
 metadata:
   name: security-rules

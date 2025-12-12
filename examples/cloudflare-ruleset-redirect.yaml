@@ -1,4 +1,4 @@
-apiVersion: cloudflare.example.com/v1
+apiVersion: cloudflare.k8s.io/v1
 kind: CloudflareRuleset
 metadata:
   name: redirect-rules

@@ -1,13 +1,13 @@
-apiVersion: cloudflare.example.com/v1
+apiVersion: cloudflare.k8s.io/v1
 kind: CloudflareRecord
 metadata:
-  name: api-cname
+  name: test-jeremygovi-cname
   namespace: default
 spec:
-  zoneId: "abcd1234"
-  name: "api.example.com"
+  zoneId: "2b47528563f073167e2e466aa26f2ecf"
+  name: "test.jeremygovi.win"
   type: "CNAME"
-  content: "api-backend.example.com"
+  content: "www.google.com"
   ttl: 1
   proxied: false
-  comment: "API endpoint CNAME record"
+  comment: "cname test record to google"

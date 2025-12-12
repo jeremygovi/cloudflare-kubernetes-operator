@@ -1,13 +1,13 @@
-apiVersion: cloudflare.example.com/v1
+apiVersion: cloudflare.k8s.io/v1
 kind: CloudflareRecord
 metadata:
-  name: www-example
+  name: test-jeremygovi-a
   namespace: default
 spec:
-  zoneId: "abcd1234"
-  name: "www.example.com"
+  zoneId: "2b47528563f073167e2e466aa26f2ecf"
+  name: "www.jeremygovi.win"
   type: "A"
-  content: "1.2.3.4"
+  content: "185.214.53.1"
   ttl: 3600
   proxied: true
-  comment: "Main website A record"
+  comment: "test A record"
