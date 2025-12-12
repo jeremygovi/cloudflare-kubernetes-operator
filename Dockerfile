@@ -1,46 +1,33 @@
 # Build stage
-FROM node:20-alpine AS builder
+FROM golang:1.22-alpine AS builder
 
-WORKDIR /app
+# Install build dependencies
+RUN apk add --no-cache git make
 
-# Copy package files
-COPY package*.json ./
-COPY tsconfig.json ./
+WORKDIR /workspace
 
-COPY .npmrc ./
+# Copy go mod files
+COPY go.mod go.sum ./
 
-# Install dependencies
-RUN npm install
+# Download dependencies
+RUN go mod download
 
-# Copy source code
-COPY src ./src
+# Copy the source code
+COPY cmd/ cmd/
+COPY api/ api/
+COPY internal/ internal/
 
-# Build the application
-RUN npm run build
+# Build the binary
+RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -a -o manager cmd/main.go
 
 # Production stage
-FROM node:20-alpine
+FROM gcr.io/distroless/static:nonroot
 
-WORKDIR /app
+WORKDIR /
 
-# Copy package files
-COPY package*.json ./
-COPY .npmrc ./
+# Copy the binary from builder
+COPY --from=builder /workspace/manager .
 
-# Install only production dependencies
-RUN npm install --omit=dev
+USER 65532:65532
 
-# Copy built application from builder
-COPY --from=builder /app/dist ./dist
-
-# Create non-root user
-RUN addgroup -g 1001 -S operator && \
-    adduser -u 1001 -S operator -G operator
-
-USER operator
-
-# Set environment variables
-ENV NODE_ENV=production
-
-# Run the operator
-CMD ["node", "dist/index.js", "start"]
+ENTRYPOINT ["/manager"]

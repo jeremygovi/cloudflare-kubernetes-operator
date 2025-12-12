@@ -9,10 +9,25 @@ services:
     container_name: cloudflare-operator
     environment:
       - CLOUDFLARE_API_TOKEN=${CLOUDFLARE_API_TOKEN}
-      - CLOUDFLARE_ACCOUNT_ID=${CLOUDFLARE_ACCOUNT_ID}
-      - LOG_LEVEL=${LOG_LEVEL:-info}
+      - CLOUDFLARE_ACCOUNT_ID=${CLOUDFLARE_ACCOUNT_ID:-}
+      - KUBECONFIG=/kubeconfig/config
     volumes:
       # Mount kubeconfig for local development
-      - ~/.kube/config:/home/operator/.kube/config:ro
-    # Use host network to access kind cluster
+      - ~/.kube/config:/kubeconfig/config:ro
+    command:
+      - "--metrics-bind-address=:8080"
+      - "--health-probe-bind-address=:8081"
+      - "--leader-elect=false"
+      - "--requeue-duration=5m"
+    ports:
+      - "8080:8080" # Prometheus metrics
+      - "8081:8081" # Health & readiness probes
+    # Use host network to access local kind/k3s/minikube clusters
     network_mode: "host"
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:8081/healthz"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
