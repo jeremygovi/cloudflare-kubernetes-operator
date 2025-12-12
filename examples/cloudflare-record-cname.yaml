@@ -1,4 +1,4 @@
-apiVersion: cloudflare.k8s.io/v1
+apiVersion: cloudflare.io/v1
 kind: CloudflareRecord
 metadata:
   name: test-jeremygovi-cname
@@ -7,7 +7,7 @@ spec:
   zoneId: "2b47528563f073167e2e466aa26f2ecf"
   name: "test.jeremygovi.win"
   type: "CNAME"
-  content: "www.google.com"
+  content: "www.jeremygovi.win"
   ttl: 1
   proxied: false
-  comment: "cname test record to google"
+  comment: "cname test record to jeremygovi.win"
