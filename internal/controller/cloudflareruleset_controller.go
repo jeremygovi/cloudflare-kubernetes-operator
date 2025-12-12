@@ -18,6 +18,7 @@ package controller
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"time"
 
@@ -110,11 +111,24 @@ func (r *CloudflareRulesetReconciler) reconcileRuleset(ctx context.Context, rule
 		rulesetName = fmt.Sprintf("k8s-%s", ruleset.Name)
 	}
 
-	// Note: L'API Cloudflare Ruleset nécessite l'utilisation de l'API REST directe
-	// Pour l'instant, on marque comme actif sans appeler réellement l'API
-	// TODO: Implémenter l'API REST Cloudflare pour les rulesets
-	log.Info("Ruleset reconciliation (API REST not yet implemented)", "name", rulesetName, "phase", ruleset.Spec.Phase)
-	rulesetID := "placeholder-" + string(ruleset.UID)
+	var rulesetID string
+	var err error
+
+	// Check if ruleset already exists
+	if ruleset.Status.RulesetID != "" {
+		// Update existing ruleset
+		log.Info("Updating existing ruleset", "name", rulesetName, "phase", ruleset.Spec.Phase, "rulesetID", ruleset.Status.RulesetID)
+		err = r.updateRuleset(ctx, ruleset.Spec.ZoneID, ruleset.Status.RulesetID, rulesetName, ruleset.Spec.Description, string(ruleset.Spec.Phase), ruleset.Spec.Rules)
+		rulesetID = ruleset.Status.RulesetID
+	} else {
+		// Create new ruleset
+		log.Info("Creating new ruleset", "name", rulesetName, "phase", ruleset.Spec.Phase, "zoneID", ruleset.Spec.ZoneID)
+		rulesetID, err = r.createRuleset(ctx, ruleset.Spec.ZoneID, rulesetName, ruleset.Spec.Description, string(ruleset.Spec.Phase), ruleset.Spec.Rules)
+	}
+
+	if err != nil {
+		return r.handleReconcileError(ctx, ruleset, fmt.Errorf("failed to reconcile ruleset: %w", err))
+	}
 
 	// Update status to Active
 	now := metav1.NewTime(time.Now())
@@ -155,8 +169,11 @@ func (r *CloudflareRulesetReconciler) handleDeletion(ctx context.Context, rulese
 	// Delete the ruleset from Cloudflare if it exists
 	if ruleset.Status.RulesetID != "" {
 		log.Info("Deleting ruleset from Cloudflare", "rulesetID", ruleset.Status.RulesetID)
-		// TODO: Implémenter la suppression via API REST
-		log.Info("Ruleset deletion (API REST not yet implemented)")
+		if err := r.deleteRuleset(ctx, ruleset.Spec.ZoneID, ruleset.Status.RulesetID); err != nil {
+			log.Error(err, "Failed to delete ruleset from Cloudflare")
+			return ctrl.Result{}, err
+		}
+		log.Info("Successfully deleted ruleset from Cloudflare")
 	}
 
 	// Remove finalizer
@@ -217,4 +234,79 @@ func (r *CloudflareRulesetReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		Complete(r)
 }
 
+// createRuleset creates a new ruleset in Cloudflare using the SDK
+func (r *CloudflareRulesetReconciler) createRuleset(ctx context.Context, zoneID, name, description, phase string, rules []cloudflarev1.Rule) (string, error) {
+	// Convert rules to SDK format
+	apiRules := make([]cloudflare.RulesetRule, len(rules))
+	for i, rule := range rules {
+		apiRules[i] = cloudflare.RulesetRule{
+			Action:      rule.Action,
+			Expression:  rule.Expression,
+			Description: rule.Description,
+			Enabled:     rule.Enabled,
+		}
+		if rule.ActionParameters != nil {
+			var params cloudflare.RulesetRuleActionParameters
+			if err := json.Unmarshal(rule.ActionParameters.Raw, &params); err != nil {
+				return "", fmt.Errorf("failed to unmarshal action parameters: %w", err)
+			}
+			apiRules[i].ActionParameters = &params
+		}
+	}
 
+	// Create ruleset using SDK
+	result, err := r.CloudflareAPI.CreateRuleset(ctx, cloudflare.ZoneIdentifier(zoneID), cloudflare.CreateRulesetParams{
+		Name:        name,
+		Description: description,
+		Kind:        "zone",
+		Phase:       phase,
+		Rules:       apiRules,
+	})
+	if err != nil {
+		return "", fmt.Errorf("failed to create ruleset: %w", err)
+	}
+
+	return result.ID, nil
+}
+
+// updateRuleset updates an existing ruleset in Cloudflare using the SDK
+func (r *CloudflareRulesetReconciler) updateRuleset(ctx context.Context, zoneID, rulesetID, name, description, phase string, rules []cloudflarev1.Rule) error {
+	// Convert rules to SDK format
+	apiRules := make([]cloudflare.RulesetRule, len(rules))
+	for i, rule := range rules {
+		apiRules[i] = cloudflare.RulesetRule{
+			Action:      rule.Action,
+			Expression:  rule.Expression,
+			Description: rule.Description,
+			Enabled:     rule.Enabled,
+		}
+		if rule.ActionParameters != nil {
+			var params cloudflare.RulesetRuleActionParameters
+			if err := json.Unmarshal(rule.ActionParameters.Raw, &params); err != nil {
+				return fmt.Errorf("failed to unmarshal action parameters: %w", err)
+			}
+			apiRules[i].ActionParameters = &params
+		}
+	}
+
+	// Update ruleset using SDK
+	_, err := r.CloudflareAPI.UpdateRuleset(ctx, cloudflare.ZoneIdentifier(zoneID), cloudflare.UpdateRulesetParams{
+		ID:          rulesetID,
+		Description: description,
+		Rules:       apiRules,
+	})
+	if err != nil {
+		return fmt.Errorf("failed to update ruleset: %w", err)
+	}
+
+	return nil
+}
+
+// deleteRuleset deletes a ruleset from Cloudflare using the SDK
+func (r *CloudflareRulesetReconciler) deleteRuleset(ctx context.Context, zoneID, rulesetID string) error {
+	err := r.CloudflareAPI.DeleteRuleset(ctx, cloudflare.ZoneIdentifier(zoneID), rulesetID)
+	if err != nil {
+		return fmt.Errorf("failed to delete ruleset: %w", err)
+	}
+	return nil
+}

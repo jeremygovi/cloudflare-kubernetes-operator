@@ -22,17 +22,18 @@ import (
 )
 
 // RulesetPhase represents the phase in which the ruleset is executed
-// +kubebuilder:validation:Enum=http_request_firewall_custom;http_request_firewall_managed;http_request_transform;http_response_headers_transform;http_request_late_transform;http_request_origin;http_response_compression
+// +kubebuilder:validation:Enum=http_request_firewall_custom;http_request_firewall_managed;http_request_transform;http_response_headers_transform;http_request_late_transform;http_request_dynamic_redirect;http_request_origin;http_response_compression
 type RulesetPhase string
 
 const (
-	RulesetPhaseHTTPRequestFirewallCustom        RulesetPhase = "http_request_firewall_custom"
-	RulesetPhaseHTTPRequestFirewallManaged       RulesetPhase = "http_request_firewall_managed"
-	RulesetPhaseHTTPRequestTransform             RulesetPhase = "http_request_transform"
-	RulesetPhaseHTTPResponseHeadersTransform     RulesetPhase = "http_response_headers_transform"
-	RulesetPhaseHTTPRequestLateTransform         RulesetPhase = "http_request_late_transform"
-	RulesetPhaseHTTPRequestOrigin                RulesetPhase = "http_request_origin"
-	RulesetPhaseHTTPResponseCompression          RulesetPhase = "http_response_compression"
+	RulesetPhaseHTTPRequestFirewallCustom    RulesetPhase = "http_request_firewall_custom"
+	RulesetPhaseHTTPRequestFirewallManaged   RulesetPhase = "http_request_firewall_managed"
+	RulesetPhaseHTTPRequestTransform         RulesetPhase = "http_request_transform"
+	RulesetPhaseHTTPResponseHeadersTransform RulesetPhase = "http_response_headers_transform"
+	RulesetPhaseHTTPRequestLateTransform     RulesetPhase = "http_request_late_transform"
+	RulesetPhaseHTTPRequestDynamicRedirect   RulesetPhase = "http_request_dynamic_redirect"
+	RulesetPhaseHTTPRequestOrigin            RulesetPhase = "http_request_origin"
+	RulesetPhaseHTTPResponseCompression      RulesetPhase = "http_response_compression"
 )
 
 // Rule defines a single rule in a ruleset

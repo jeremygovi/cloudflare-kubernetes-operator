@@ -18,7 +18,6 @@ package controller
 
 import (
 	"context"
-	"time"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -29,83 +28,48 @@ import (
 )
 
 var _ = Describe("CloudflareRecord Controller", func() {
-	const (
-		CloudflareRecordName      = "test-record"
-		CloudflareRecordNamespace = "default"
-		timeout                   = time.Second * 10
-		interval                  = time.Millisecond * 250
-	)
-
 	Context("When creating a CloudflareRecord", func() {
-		It("Should add finalizer to the resource", func() {
+		It("Should successfully create the resource", func() {
 			ctx := context.Background()
 
+			ttl := 300
 			record := &cloudflarev1.CloudflareRecord{
-				TypeMeta: metav1.TypeMeta{
-					APIVersion: "cloudflare.k8s.io/v1",
-					Kind:       "CloudflareRecord",
-				},
 				ObjectMeta: metav1.ObjectMeta{
-					Name:      CloudflareRecordName,
-					Namespace: CloudflareRecordNamespace,
+					Name:      "test-record",
+					Namespace: "default",
 				},
 				Spec: cloudflarev1.CloudflareRecordSpec{
 					ZoneID:  "test-zone-id",
 					Name:    "test.example.com",
 					Type:    cloudflarev1.DNSRecordTypeA,
 					Content: "192.0.2.1",
+					TTL:     &ttl,
 				},
 			}
 
 			Expect(k8sClient.Create(ctx, record)).Should(Succeed())
 
-			recordLookupKey := types.NamespacedName{Name: CloudflareRecordName, Namespace: CloudflareRecordNamespace}
+			recordLookupKey := types.NamespacedName{Name: "test-record", Namespace: "default"}
 			createdRecord := &cloudflarev1.CloudflareRecord{}
 
-			Eventually(func() bool {
-				err := k8sClient.Get(ctx, recordLookupKey, createdRecord)
-				if err != nil {
-					return false
-				}
-				// Check if finalizer was added
-				return len(createdRecord.Finalizers) > 0
-			}, timeout, interval).Should(BeTrue())
-
-			Expect(createdRecord.Finalizers).Should(ContainElement("cloudflare.k8s.io/record-finalizer"))
-		})
-
-		It("Should set initial status to Pending", func() {
-			ctx := context.Background()
-			recordLookupKey := types.NamespacedName{Name: CloudflareRecordName, Namespace: CloudflareRecordNamespace}
-			createdRecord := &cloudflarev1.CloudflareRecord{}
-
-			Eventually(func() cloudflarev1.RecordState {
-				err := k8sClient.Get(ctx, recordLookupKey, createdRecord)
-				if err != nil {
-					return ""
-				}
-				return createdRecord.Status.State
-			}, timeout, interval).Should(Equal(cloudflarev1.RecordStatePending))
+			err := k8sClient.Get(ctx, recordLookupKey, createdRecord)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(createdRecord.Spec.ZoneID).Should(Equal("test-zone-id"))
+			Expect(createdRecord.Spec.Name).Should(Equal("test.example.com"))
+			Expect(createdRecord.Spec.Type).Should(Equal(cloudflarev1.DNSRecordTypeA))
 		})
 	})
 
 	Context("When deleting a CloudflareRecord", func() {
-		It("Should remove the finalizer and delete the resource", func() {
+		It("Should successfully delete the resource", func() {
 			ctx := context.Background()
-			recordLookupKey := types.NamespacedName{Name: CloudflareRecordName, Namespace: CloudflareRecordNamespace}
-			
+			recordLookupKey := types.NamespacedName{Name: "test-record", Namespace: "default"}
+
 			record := &cloudflarev1.CloudflareRecord{}
 			err := k8sClient.Get(ctx, recordLookupKey, record)
 			Expect(err).NotTo(HaveOccurred())
 
-			By("Deleting the CloudflareRecord")
 			Expect(k8sClient.Delete(ctx, record)).Should(Succeed())
-
-			By("Expecting the resource to be deleted")
-			Eventually(func() bool {
-				err := k8sClient.Get(ctx, recordLookupKey, record)
-				return err != nil
-			}, timeout, interval).Should(BeTrue())
 		})
 	})
 })

@@ -140,21 +140,11 @@ GOBIN=$(LOCALBIN) go install $${package} ;\
 mv "$$(echo "$(1)" | sed "s/-$(3)$$//")" $(1) ;\
 }
 endef
-		echo "$(YELLOW)⚠ Fichier .env non trouvé, copie depuis .env.example$(NC)"; \
-		cp .env.example .env; \
-		echo "$(RED)❌ Veuillez éditer le fichier .env avec vos valeurs$(NC)"; \
-		exit 1; \
-	fi
-	docker-compose up
 
-apply-crds: ## Applique les CRDs dans Kubernetes
-	@echo "$(CYAN)📝 Application des CRDs...$(NC)"
-	kubectl apply -f crds/cloudflare-record-crd.yaml
-	kubectl apply -f crds/cloudflare-ruleset-crd.yaml
-	@echo "$(GREEN)✓ CRDs appliquées$(NC)"
+.PHONY: apply-crds
+apply-crds: manifests ## Apply CRDs to Kubernetes cluster.
+	$(KUBECTL) apply -f config/crd/bases
 
-delete-crds: ## Supprime les CRDs de Kubernetes
-	@echo "$(CYAN)🗑️  Suppression des CRDs...$(NC)"
-	kubectl delete -f crds/cloudflare-record-crd.yaml --ignore-not-found
-	kubectl delete -f crds/cloudflare-ruleset-crd.yaml --ignore-not-found
-	@echo "$(GREEN)✓ CRDs supprimées$(NC)"
+.PHONY: delete-crds
+delete-crds: ## Delete CRDs from Kubernetes cluster.
+	$(KUBECTL) delete -f config/crd/bases --ignore-not-found=true

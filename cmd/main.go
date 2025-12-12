@@ -62,7 +62,7 @@ func main() {
 		"Duration after which resources are requeued for reconciliation.")
 
 	opts := zap.Options{
-		Development: true,
+		Development: false, // Set to false to respect log level flags
 	}
 	opts.BindFlags(flag.CommandLine)
 	flag.Parse()

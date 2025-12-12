@@ -126,7 +126,7 @@ func (r *CloudflareRecordReconciler) reconcileDNSRecord(ctx context.Context, rec
 	if record.Status.RecordID != "" {
 		// Update existing record
 		log.Info("Updating existing DNS record", "recordID", record.Status.RecordID, "zoneID", zoneID)
-		
+
 		updateParams := cloudflare.UpdateDNSRecordParams{
 			ID:       record.Status.RecordID,
 			Name:     recordParams.Name,
@@ -146,7 +146,7 @@ func (r *CloudflareRecordReconciler) reconcileDNSRecord(ctx context.Context, rec
 	} else {
 		// Create new record
 		log.Info("Creating new DNS record", "name", record.Spec.Name, "type", record.Spec.Type, "zoneID", zoneID)
-		
+
 		response, err := r.CloudflareAPI.CreateDNSRecord(ctx, cloudflare.ZoneIdentifier(zoneID), recordParams)
 		if err != nil {
 			return r.handleReconcileError(ctx, record, fmt.Errorf("failed to create DNS record: %w", err))
@@ -193,7 +193,7 @@ func (r *CloudflareRecordReconciler) handleDeletion(ctx context.Context, record 
 	// Delete the DNS record from Cloudflare if it exists
 	if record.Status.RecordID != "" {
 		log.Info("Deleting DNS record from Cloudflare", "recordID", record.Status.RecordID)
-		
+
 		err := r.CloudflareAPI.DeleteDNSRecord(ctx, cloudflare.ZoneIdentifier(record.Spec.ZoneID), record.Status.RecordID)
 		if err != nil {
 			// Check if record already deleted (404)
@@ -298,7 +298,7 @@ func isNotFoundError(err error) bool {
 	}
 	// Check if error message contains "not found" or similar indicators
 	errorMsg := err.Error()
-	return strings.Contains(errorMsg, "not found") || 
-	       strings.Contains(errorMsg, "404") ||
-	       strings.Contains(errorMsg, "could not be found")
+	return strings.Contains(errorMsg, "not found") ||
+		strings.Contains(errorMsg, "404") ||
+		strings.Contains(errorMsg, "could not be found")
 }

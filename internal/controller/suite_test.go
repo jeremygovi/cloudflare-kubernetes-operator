@@ -19,7 +19,6 @@ package controller
 import (
 	"context"
 	"fmt"
-	"os"
 	"path/filepath"
 	"runtime"
 	"testing"
@@ -35,7 +34,11 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
 	cloudflarev1 "github.com/jeremygovi/cloudflare-kubernetes-operator/api/v1"
+	//+kubebuilder:scaffold:imports
 )
+
+// These tests use Ginkgo (BDD-style Go testing framework). Refer to
+// http://onsi.github.io/ginkgo/ to learn more about Ginkgo.
 
 var cfg *rest.Config
 var k8sClient client.Client
@@ -77,14 +80,17 @@ var _ = BeforeSuite(func() {
 	err = cloudflarev1.AddToScheme(scheme.Scheme)
 	Expect(err).NotTo(HaveOccurred())
 
+	//+kubebuilder:scaffold:scheme
+
 	k8sClient, err = client.New(cfg, client.Options{Scheme: scheme.Scheme})
 	Expect(err).NotTo(HaveOccurred())
 	Expect(k8sClient).NotTo(BeNil())
+
 })
 
 var _ = AfterSuite(func() {
-	cancel()
 	By("tearing down the test environment")
+	cancel()
 	err := testEnv.Stop()
 	Expect(err).NotTo(HaveOccurred())
 })

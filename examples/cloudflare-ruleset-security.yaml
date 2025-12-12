@@ -4,7 +4,7 @@ metadata:
   name: security-rules
   namespace: default
 spec:
-  zoneId: "abcd1234"
+  zoneId: "2b47528563f073167e2e466aa26f2ecf"
   name: "Security Rules"
   description: "Block malicious traffic and suspicious requests"
   phase: "http_request_firewall_custom"
@@ -13,13 +13,18 @@ spec:
       expression: "(cf.threat_score gt 50)"
       description: "Block high threat score requests"
       enabled: true
-    
+
     - action: "challenge"
       expression: "(http.request.uri.path contains \"/admin\")"
       description: "Challenge admin panel access"
       enabled: true
-    
+
     - action: "js_challenge"
-      expression: "(cf.bot_management.score lt 30)"
-      description: "JS challenge for low bot scores"
+      expression: "(not http.request.version in {\"HTTP/2\" \"HTTP/3\"}) and (http.user_agent contains \"bot\")"
+      description: "JS challenge for suspicious old protocol bots"
+      enabled: true
+
+    - action: "block"
+      expression: "(http.request.uri.path contains \"/.env\") or (http.request.uri.path contains \"/wp-admin\") or (http.request.uri.path contains \"/phpmyadmin\")"
+      description: "Block common vulnerability scanning paths"
       enabled: true
