@@ -1,0 +1,18 @@
+apiVersion: cloudflare.io/v1
+kind: CloudflareZone
+metadata:
+  name: test-jeremygovi-fake-zone
+  namespace: default
+spec:
+  # Domain name for the zone
+  name: "jeremygovi.cloud-ip.cc"
+  # Your Cloudflare Account ID (optional)
+  # If not specified, uses the CLOUDFLARE_ACCOUNT_ID environment variable
+  # Find it at: https://dash.cloudflare.com/ (in the URL or sidebar)
+  # accountId: "your-account-id-here"
+  # Zone type: full (default), partial (CNAME setup), or secondary
+  type: "full"
+  # Whether the zone should be paused (default: false)
+  paused: false
+  # JumpStart automatically scans for existing DNS records (default: false)
+  jumpStart: false

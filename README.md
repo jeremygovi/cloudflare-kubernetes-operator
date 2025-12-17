@@ -1,15 +1,16 @@
 # Cloudflare Kubernetes Operator
 
-Opérateur Kubernetes en Go pour gérer automatiquement les ressources Cloudflare (enregistrements DNS et rulesets) directement depuis Kubernetes.
+Opérateur Kubernetes en Go pour gérer automatiquement les ressources Cloudflare (zones, enregistrements DNS et rulesets) directement depuis Kubernetes.
 
 ## 🚀 Fonctionnalités
 
+- **CloudflareZone**: Gestion complète des zones Cloudflare (création, configuration, nameservers)
 - **CloudflareRecord**: Gestion complète des enregistrements DNS Cloudflare (A, AAAA, CNAME, TXT, MX, etc.)
 - **CloudflareRuleset**: Gestion des rulesets Cloudflare (firewall, redirections, transformations)
 - Synchronisation automatique avec Cloudflare
 - Support du statut des ressources
 - Gestion des erreurs et retry automatique
-- Logs structurés avec Winston
+- Logs structurés
 
 ## 📋 Prérequis
 
@@ -40,7 +41,8 @@ Pour obtenir un token API Cloudflare:
 2. Créez un nouveau token avec les permissions:
    - Zone.DNS (Edit)
    - Zone.Rulesets (Edit)
-   - Zone.Zone (Read)
+   - Zone.Zone (Edit)
+   - Account.Account Settings (Read) - pour CloudflareZone
 
 ### 3. Construire l'image Docker
 
@@ -69,10 +71,27 @@ make docker-run
 
 ## 📝 Exemples de ressources
 
+Zone - Création de zone
+
+```yaml
+apiVersion: cloudflare.io/v1
+kind: CloudflareZone
+metadata:
+  name: example-zone
+  namespace: default
+spec:
+  name: "example.com"
+  # accountId est optionnel - utilise CLOUDFLARE_ACCOUNT_ID si non spécifié
+  # accountId: "your-account-id"
+  type: "full" # full, partial, or secondary
+  jumpStart: true
+  paused: false
+```
+
 ### CloudflareRecord - Enregistrement A
 
 ```yaml
-apiVersion: cloudflare.k8s.io/v1
+apiVersion: cloudflare.io/v1
 kind: CloudflareRecord
 metadata:
   name: www-example
@@ -90,6 +109,7 @@ spec:
 ### CloudflareRuleset - Règles de sécurité
 
 ```yaml
+apiVersion: cloudflare
 apiVersion: cloudflare.k8s.io/v1
 kind: CloudflareRuleset
 metadata:

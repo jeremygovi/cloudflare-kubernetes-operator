@@ -133,6 +133,18 @@ func main() {
 		os.Exit(1)
 	}
 
+	// Setup CloudflareZone controller
+	if err = (&controller.CloudflareZoneReconciler{
+		Client:          mgr.GetClient(),
+		Scheme:          mgr.GetScheme(),
+		CloudflareAPI:   cloudflareAPI,
+		RequeueDuration: requeueDuration,
+		AccountID:       os.Getenv("CLOUDFLARE_ACCOUNT_ID"), // Optional: default account ID
+	}).SetupWithManager(mgr); err != nil {
+		setupLog.Error(err, "unable to create controller", "controller", "CloudflareZone")
+		os.Exit(1)
+	}
+
 	// Add health and readiness checks
 	if err := mgr.AddHealthzCheck("healthz", healthz.Ping); err != nil {
 		setupLog.Error(err, "unable to set up health check")
