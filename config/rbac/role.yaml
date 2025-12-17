@@ -56,3 +56,29 @@ rules:
   - get
   - patch
   - update
+- apiGroups:
+  - cloudflare.io
+  resources:
+  - cloudflarezones
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - cloudflare.io
+  resources:
+  - cloudflarezones/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - cloudflare.io
+  resources:
+  - cloudflarezones/status
+  verbs:
+  - get
+  - patch
+  - update
