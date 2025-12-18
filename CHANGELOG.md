@@ -1,3 +1,10 @@
+## [1.0.7](https://github.com/jeremygovi/cloudflare-kubernetes-operator/compare/v1.0.6...v1.0.7) (2025-12-18)
+
+
+### Bug Fixes
+
+* **ci:** use pat token instead ([6f8f7b7](https://github.com/jeremygovi/cloudflare-kubernetes-operator/commit/6f8f7b769c862b82fb69ef817635c1e31d0884b0))
+
 ## [1.0.6](https://github.com/jeremygovi/cloudflare-kubernetes-operator/compare/v1.0.5...v1.0.6) (2025-12-18)
 
 
