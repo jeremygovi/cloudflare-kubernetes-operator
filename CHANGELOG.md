@@ -1,3 +1,10 @@
+## [1.0.3](https://github.com/jeremygovi/cloudflare-kubernetes-operator/compare/v1.0.2...v1.0.3) (2025-12-18)
+
+
+### Bug Fixes
+
+* **ci:** docker publish run with wrong tag ([303f6cf](https://github.com/jeremygovi/cloudflare-kubernetes-operator/commit/303f6cf0af478f0d1d09412351c5cf9fe9212d8b))
+
 ## [1.0.2](https://github.com/jeremygovi/cloudflare-kubernetes-operator/compare/v1.0.1...v1.0.2) (2025-12-18)
 
 
