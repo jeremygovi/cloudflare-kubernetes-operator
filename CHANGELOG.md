@@ -1,3 +1,10 @@
+## [1.0.5](https://github.com/jeremygovi/cloudflare-kubernetes-operator/compare/v1.0.4...v1.0.5) (2025-12-18)
+
+
+### Bug Fixes
+
+* **ci:** little change to trigger ci ([650a215](https://github.com/jeremygovi/cloudflare-kubernetes-operator/commit/650a215fc73c26676e337ea0a68b44ef4e66f3d0))
+
 ## [1.0.4](https://github.com/jeremygovi/cloudflare-kubernetes-operator/compare/v1.0.3...v1.0.4) (2025-12-18)
 
 
