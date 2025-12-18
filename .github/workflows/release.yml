@@ -46,20 +46,17 @@ jobs:
           fetch-depth: 0
           token: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+
+      - name: Install dependencies
+        run: npm install
+
       - name: Semantic Release
         id: semantic
-        uses: cycjimmy/semantic-release-action@v3
-        with:
-          semantic_version: 20
-          branches: |
-            [
-              'main',
-              'master',
-              {'name': 'develop', 'prerelease': 'beta', 'channel': 'beta'}
-            ]
-          extra_plugins: |
-            @semantic-release/changelog@6
-            @semantic-release/git@10
+        run: npx semantic-release
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
