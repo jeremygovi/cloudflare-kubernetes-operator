@@ -1,3 +1,10 @@
+## [1.0.2](https://github.com/jeremygovi/cloudflare-kubernetes-operator/compare/v1.0.1...v1.0.2) (2025-12-18)
+
+
+### Bug Fixes
+
+* **ci:** arm64 arch was built with amd64 ([ba7545c](https://github.com/jeremygovi/cloudflare-kubernetes-operator/commit/ba7545cee309646656f725ee0aaef2867586d26f))
+
 ## [1.0.1](https://github.com/jeremygovi/cloudflare-kubernetes-operator/compare/v1.0.0...v1.0.1) (2025-12-18)
 
 
