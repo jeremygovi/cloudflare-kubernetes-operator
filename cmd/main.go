@@ -22,6 +22,7 @@ import (
 	"time"
 
 	"github.com/cloudflare/cloudflare-go"
+	"go.uber.org/zap/zapcore"
 	_ "k8s.io/client-go/plugin/pkg/client/auth"
 
 	"k8s.io/apimachinery/pkg/runtime"
@@ -67,7 +68,25 @@ func main() {
 	opts.BindFlags(flag.CommandLine)
 	flag.Parse()
 
+	// Set log level from environment variable
+	logLevel := os.Getenv("LOG_LEVEL")
+	switch logLevel {
+	case "debug", "1":
+		level := zapcore.Level(-1)
+		opts.Level = &level
+	case "trace", "2":
+		level := zapcore.Level(-2)
+		opts.Level = &level
+	case "info", "0", "":
+		level := zapcore.Level(0)
+		opts.Level = &level
+	default:
+		level := zapcore.Level(0)
+		opts.Level = &level
+	}
+
 	ctrl.SetLogger(zap.New(zap.UseFlagOptions(&opts)))
+	setupLog.Info("Log level configured", "level", logLevel)
 
 	// Try in-cluster config first, then fallback to kubeconfig
 	config, err := ctrl.GetConfig()

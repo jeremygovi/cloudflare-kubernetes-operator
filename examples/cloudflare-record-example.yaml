@@ -4,10 +4,10 @@ metadata:
   name: test-jeremygovi-a
   namespace: default
 spec:
-  zoneId: "2b47528563f073167e2e466aa26f2ecf"
-  name: "www.jeremygovi.win"
+  domain: "jeremygovi.win"
+  name: "www"
   type: "A"
   content: "185.214.53.1"
-  ttl: 3600
-  proxied: true
+  ttl: 60
+  proxied: false
   comment: "test A record"

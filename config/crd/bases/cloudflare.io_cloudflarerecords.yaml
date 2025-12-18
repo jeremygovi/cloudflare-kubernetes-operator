@@ -18,8 +18,8 @@ spec:
   scope: Namespaced
   versions:
   - additionalPrinterColumns:
-    - jsonPath: .spec.zoneId
-      name: Zone ID
+    - jsonPath: .spec.domain
+      name: Domain
       type: string
     - jsonPath: .spec.name
       name: Name
@@ -69,10 +69,14 @@ spec:
                 description: Content is the DNS record content/value
                 minLength: 1
                 type: string
-              name:
-                description: Name is the DNS record name (e.g., www.example.com or
-                  @ for root)
+              domain:
+                description: Domain is the base domain/zone (e.g., example.com)
                 minLength: 1
+                pattern: ^([a-z0-9]+(-[a-z0-9]+)*\.)+[a-z]{2,}$
+                type: string
+              name:
+                description: Name is the subdomain or record name (e.g., www, @, or
+                  empty for root)
                 type: string
               priority:
                 description: Priority is used for MX and SRV records
@@ -103,16 +107,11 @@ spec:
                 - SRV
                 - CAA
                 type: string
-              zoneId:
-                description: ZoneID is the Cloudflare Zone ID where the DNS record
-                  will be created
-                minLength: 1
-                type: string
             required:
             - content
+            - domain
             - name
             - type
-            - zoneId
             type: object
           status:
             description: CloudflareRecordStatus defines the observed state of CloudflareRecord
@@ -210,6 +209,9 @@ spec:
                 - Pending
                 - Active
                 - Error
+                type: string
+              zoneId:
+                description: ZoneID is the resolved Cloudflare Zone ID
                 type: string
             type: object
         type: object

@@ -19,7 +19,6 @@ package controller
 import (
 	"context"
 	"fmt"
-	"strings"
 	"time"
 
 	"github.com/cloudflare/cloudflare-go"
@@ -62,7 +61,8 @@ func (r *CloudflareRecordReconciler) Reconcile(ctx context.Context, req ctrl.Req
 	record := &cloudflarev1.CloudflareRecord{}
 	if err := r.Get(ctx, req.NamespacedName, record); err != nil {
 		if errors.IsNotFound(err) {
-			log.Info("CloudflareRecord resource not found. Ignoring since object must be deleted")
+			// Resource already deleted, nothing to do
+			log.V(1).Info("CloudflareRecord resource not found. Ignoring because object is already deleted")
 			return ctrl.Result{}, nil
 		}
 		log.Error(err, "Failed to get CloudflareRecord")
@@ -76,7 +76,7 @@ func (r *CloudflareRecordReconciler) Reconcile(ctx context.Context, req ctrl.Req
 
 	// Add finalizer if not present
 	if !controllerutil.ContainsFinalizer(record, cloudflareRecordFinalizer) {
-		log.Info("Adding finalizer to CloudflareRecord")
+		log.V(1).Info("Adding finalizer to CloudflareRecord")
 		controllerutil.AddFinalizer(record, cloudflareRecordFinalizer)
 		if err := r.Update(ctx, record); err != nil {
 			log.Error(err, "Failed to add finalizer")
@@ -108,10 +108,25 @@ func (r *CloudflareRecordReconciler) reconcileDNSRecord(ctx context.Context, rec
 		}
 	}
 
+	// Resolve ZoneID from domain if not already resolved
+	zoneID := record.Status.ZoneID
+	if zoneID == "" {
+		log.V(1).Info("Resolving ZoneID for domain", "domain", record.Spec.Domain)
+		resolvedZoneID, err := r.resolveZoneID(ctx, record.Spec.Domain)
+		if err != nil {
+			return r.handleReconcileError(ctx, record, fmt.Errorf("failed to resolve zone ID for domain %s: %w", record.Spec.Domain, err))
+		}
+		zoneID = resolvedZoneID
+		record.Status.ZoneID = zoneID
+		log.Info("Resolved ZoneID", "domain", record.Spec.Domain, "zoneID", zoneID)
+	}
+
+	// Build full DNS name
+	fullName := r.buildFullDNSName(record.Spec.Name, record.Spec.Domain)
+
 	// Prepare DNS record parameters
-	zoneID := record.Spec.ZoneID
 	recordParams := cloudflare.CreateDNSRecordParams{
-		Name:     record.Spec.Name,
+		Name:     fullName,
 		Type:     string(record.Spec.Type),
 		Content:  record.Spec.Content,
 		TTL:      intPtrToInt(record.Spec.TTL, 1),
@@ -178,7 +193,7 @@ func (r *CloudflareRecordReconciler) reconcileDNSRecord(ctx context.Context, rec
 		return ctrl.Result{}, err
 	}
 
-	log.Info("Successfully reconciled DNS record", "recordID", recordID)
+	log.Info("DNS record synchronized", "recordID", recordID)
 	return ctrl.Result{RequeueAfter: r.RequeueDuration}, nil
 }
 
@@ -191,10 +206,10 @@ func (r *CloudflareRecordReconciler) handleDeletion(ctx context.Context, record 
 	}
 
 	// Delete the DNS record from Cloudflare if it exists
-	if record.Status.RecordID != "" {
-		log.Info("Deleting DNS record from Cloudflare", "recordID", record.Status.RecordID)
+	if record.Status.RecordID != "" && record.Status.ZoneID != "" {
+		log.Info("Deleting DNS record", "domain", record.Spec.Domain, "name", record.Spec.Name)
 
-		err := r.CloudflareAPI.DeleteDNSRecord(ctx, cloudflare.ZoneIdentifier(record.Spec.ZoneID), record.Status.RecordID)
+		err := r.CloudflareAPI.DeleteDNSRecord(ctx, cloudflare.ZoneIdentifier(record.Status.ZoneID), record.Status.RecordID)
 		if err != nil {
 			// Check if record already deleted (404)
 			if !isNotFoundError(err) {
@@ -214,7 +229,7 @@ func (r *CloudflareRecordReconciler) handleDeletion(ctx context.Context, record 
 		return ctrl.Result{}, err
 	}
 
-	log.Info("Finalizer removed, resource will be deleted")
+	log.V(1).Info("Finalizer removed, resource will be deleted")
 	return ctrl.Result{}, nil
 }
 
@@ -265,40 +280,33 @@ func (r *CloudflareRecordReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		Complete(r)
 }
 
-// Helper functions
-
-func intPtrToInt(ptr *int, defaultVal int) int {
-	if ptr != nil {
-		return *ptr
+// resolveZoneID looks up the Cloudflare Zone ID for a given domain
+func (r *CloudflareRecordReconciler) resolveZoneID(ctx context.Context, domain string) (string, error) {
+	// List zones and find the one matching the domain
+	zones, err := r.CloudflareAPI.ListZones(ctx, domain)
+	if err != nil {
+		return "", fmt.Errorf("failed to list zones: %w", err)
 	}
-	return defaultVal
+
+	if len(zones) == 0 {
+		return "", fmt.Errorf("no zone found for domain %s", domain)
+	}
+
+	// Find exact match
+	for _, zone := range zones {
+		if zone.Name == domain {
+			return zone.ID, nil
+		}
+	}
+
+	return "", fmt.Errorf("zone not found for domain %s", domain)
 }
 
-func boolPtrToBool(ptr *bool, defaultVal bool) *bool {
-	if ptr != nil {
-		return ptr
+// buildFullDNSName constructs the full DNS record name from the subdomain and domain
+func (r *CloudflareRecordReconciler) buildFullDNSName(name, domain string) string {
+	// Handle special cases
+	if name == "" || name == "@" {
+		return domain
 	}
-	return &defaultVal
-}
-
-func uint16PtrToPtr(ptr *uint16) *uint16 {
-	return ptr
-}
-
-func stringToPtr(s string) *string {
-	if s == "" {
-		return nil
-	}
-	return &s
-}
-
-func isNotFoundError(err error) bool {
-	if err == nil {
-		return false
-	}
-	// Check if error message contains "not found" or similar indicators
-	errorMsg := err.Error()
-	return strings.Contains(errorMsg, "not found") ||
-		strings.Contains(errorMsg, "404") ||
-		strings.Contains(errorMsg, "could not be found")
+	return name + "." + domain
 }
