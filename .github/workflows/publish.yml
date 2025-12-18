@@ -1,9 +1,12 @@
 name: Publish Docker Image
 
 on:
-  push:
-    tags:
-      - 'v*'
+  workflow_run:
+    workflows: ["Release"]
+    types:
+      - completed
+    branches:
+      - main
 
 permissions:
   contents: read
@@ -13,9 +16,23 @@ jobs:
   publish:
     name: Publish Docker image
     runs-on: ubuntu-latest
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Get latest tag
+        id: version
+        run: |
+          git fetch --tags
+          TAG=$(git describe --tags --abbrev=0)
+          echo "tag=${TAG#v}" >> $GITHUB_OUTPUT
+
+      - name: Skip if no new tag
+        if: steps.version.outputs.tag == ''
+        run: exit 0
 
       - name: Extract tag version
         id: version
