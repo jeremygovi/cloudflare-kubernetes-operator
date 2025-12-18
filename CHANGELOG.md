@@ -1,3 +1,11 @@
+## [1.0.8](https://github.com/jeremygovi/cloudflare-kubernetes-operator/compare/v1.0.7...v1.0.8) (2025-12-18)
+
+
+### Bug Fixes
+
+* **ci:** try another way ([97d45d2](https://github.com/jeremygovi/cloudflare-kubernetes-operator/commit/97d45d28a2f87b8dfcde34e69abe94e24c7f6533))
+* **ci:** try nother way ([39edaf7](https://github.com/jeremygovi/cloudflare-kubernetes-operator/commit/39edaf7d387ef6b28fc6be6a88a584c67d8def22))
+
 ## [1.0.7](https://github.com/jeremygovi/cloudflare-kubernetes-operator/compare/v1.0.6...v1.0.7) (2025-12-18)
 
 
