@@ -1,3 +1,10 @@
+## [1.0.1](https://github.com/jeremygovi/cloudflare-kubernetes-operator/compare/v1.0.0...v1.0.1) (2025-12-18)
+
+
+### Bug Fixes
+
+* **ci:** docker publish not started ([b2d67a4](https://github.com/jeremygovi/cloudflare-kubernetes-operator/commit/b2d67a4f21c8b7920b11a9a5a53c9254be49beef))
+
 # 1.0.0 (2025-12-18)
 
 
