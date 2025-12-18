@@ -1,3 +1,10 @@
+## [1.0.4](https://github.com/jeremygovi/cloudflare-kubernetes-operator/compare/v1.0.3...v1.0.4) (2025-12-18)
+
+
+### Bug Fixes
+
+* **ci:** separate workflows ([b4b43ce](https://github.com/jeremygovi/cloudflare-kubernetes-operator/commit/b4b43ce16dc99ff0c5539e099acfa4bfd0702704))
+
 ## [1.0.3](https://github.com/jeremygovi/cloudflare-kubernetes-operator/compare/v1.0.2...v1.0.3) (2025-12-18)
 
 
