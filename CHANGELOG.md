@@ -1,3 +1,10 @@
+# [1.1.0](https://github.com/jeremygovi/cloudflare-kubernetes-operator/compare/v1.0.9...v1.1.0) (2025-12-18)
+
+
+### Features
+
+* bump golang 1.22 to 1.25 ([0431dd6](https://github.com/jeremygovi/cloudflare-kubernetes-operator/commit/0431dd699e479e74ef2afd5248fb87ef397e80de))
+
 ## [1.0.9](https://github.com/jeremygovi/cloudflare-kubernetes-operator/compare/v1.0.8...v1.0.9) (2025-12-18)
 
 
