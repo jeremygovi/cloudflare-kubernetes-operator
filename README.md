@@ -97,14 +97,16 @@ metadata:
   name: www-example
   namespace: default
 spec:
-  zoneId: "abcd1234"
-  name: "www.example.com"
+  domain: "example.com" # Le domaine de base (zone Cloudflare)
+  name: "www" # Le sous-domaine (ou @ pour root)
   type: "A"
   content: "1.2.3.4"
   ttl: 3600
   proxied: true
   comment: "Main website A record"
 ```
+
+**Note**: Le champ `domain` permet de spécifier le nom de domaine sans avoir besoin de connaître le `zoneId` à l'avance. L'opérateur résoudra automatiquement le `zoneId` correspondant.
 
 ### CloudflareRuleset - Règles de sécurité
 

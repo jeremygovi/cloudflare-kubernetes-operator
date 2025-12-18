@@ -37,14 +37,14 @@ const (
 
 // CloudflareRecordSpec defines the desired state of CloudflareRecord
 type CloudflareRecordSpec struct {
-	// ZoneID is the Cloudflare Zone ID where the DNS record will be created
+	// Domain is the base domain/zone (e.g., example.com)
 	// +kubebuilder:validation:Required
 	// +kubebuilder:validation:MinLength=1
-	ZoneID string `json:"zoneId"`
+	// +kubebuilder:validation:Pattern=`^([a-z0-9]+(-[a-z0-9]+)*\.)+[a-z]{2,}$`
+	Domain string `json:"domain"`
 
-	// Name is the DNS record name (e.g., www.example.com or @ for root)
+	// Name is the subdomain or record name (e.g., www, @, or empty for root)
 	// +kubebuilder:validation:Required
-	// +kubebuilder:validation:MinLength=1
 	Name string `json:"name"`
 
 	// Type is the DNS record type
@@ -92,6 +92,10 @@ const (
 
 // CloudflareRecordStatus defines the observed state of CloudflareRecord
 type CloudflareRecordStatus struct {
+	// ZoneID is the resolved Cloudflare Zone ID
+	// +optional
+	ZoneID string `json:"zoneId,omitempty"`
+
 	// RecordID is the Cloudflare DNS record ID
 	// +optional
 	RecordID string `json:"recordId,omitempty"`
@@ -120,7 +124,7 @@ type CloudflareRecordStatus struct {
 // +kubebuilder:object:root=true
 // +kubebuilder:subresource:status
 // +kubebuilder:resource:shortName=cfr;cfrecord
-// +kubebuilder:printcolumn:name="Zone ID",type=string,JSONPath=`.spec.zoneId`
+// +kubebuilder:printcolumn:name="Domain",type=string,JSONPath=`.spec.domain`
 // +kubebuilder:printcolumn:name="Name",type=string,JSONPath=`.spec.name`
 // +kubebuilder:printcolumn:name="Type",type=string,JSONPath=`.spec.type`
 // +kubebuilder:printcolumn:name="State",type=string,JSONPath=`.status.state`

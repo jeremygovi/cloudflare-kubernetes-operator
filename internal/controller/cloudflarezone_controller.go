@@ -60,7 +60,7 @@ func (r *CloudflareZoneReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 	zone := &cloudflarev1.CloudflareZone{}
 	if err := r.Get(ctx, req.NamespacedName, zone); err != nil {
 		if errors.IsNotFound(err) {
-			log.Info("CloudflareZone resource not found. Ignoring since object must be deleted")
+			log.V(1).Info("CloudflareZone resource not found. Ignoring since object must be deleted")
 			return ctrl.Result{}, nil
 		}
 		log.Error(err, "Failed to get CloudflareZone")
@@ -74,7 +74,7 @@ func (r *CloudflareZoneReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 
 	// Add finalizer if not present
 	if !controllerutil.ContainsFinalizer(zone, cloudflareZoneFinalizer) {
-		log.Info("Adding finalizer to CloudflareZone")
+		log.V(1).Info("Adding finalizer to CloudflareZone")
 		controllerutil.AddFinalizer(zone, cloudflareZoneFinalizer)
 		if err := r.Update(ctx, zone); err != nil {
 			log.Error(err, "Failed to add finalizer")
@@ -113,7 +113,7 @@ func (r *CloudflareZoneReconciler) reconcileZone(ctx context.Context, zone *clou
 
 	if zone.Status.ZoneID != "" {
 		// Check if zone exists and update if needed
-		log.Info("Checking existing zone", "zoneID", zone.Status.ZoneID)
+		log.V(1).Info("Checking existing zone", "zoneID", zone.Status.ZoneID)
 
 		cfZone, err = r.CloudflareAPI.ZoneDetails(ctx, zone.Status.ZoneID)
 		if err != nil {
@@ -126,7 +126,7 @@ func (r *CloudflareZoneReconciler) reconcileZone(ctx context.Context, zone *clou
 			}
 		} else {
 			// Update zone settings if needed
-			log.Info("Updating existing zone settings", "zoneID", zone.Status.ZoneID)
+			log.V(1).Info("Updating zone settings", "zoneID", zone.Status.ZoneID)
 
 			paused := boolPtrToBool(zone.Spec.Paused, false)
 			if cfZone.Paused != *paused {
@@ -151,7 +151,7 @@ func (r *CloudflareZoneReconciler) reconcileZone(ctx context.Context, zone *clou
 			if accountID == "" {
 				return r.handleReconcileError(ctx, zone, fmt.Errorf("accountId must be specified in spec or CLOUDFLARE_ACCOUNT_ID environment variable must be set"))
 			}
-			log.Info("Using account ID from environment variable", "accountID", accountID)
+			log.V(1).Info("Using account ID from environment variable", "accountID", accountID)
 		}
 
 		log.Info("Creating new zone", "name", zone.Spec.Name, "accountID", accountID)
@@ -233,7 +233,7 @@ func (r *CloudflareZoneReconciler) handleDeletion(ctx context.Context, zone *clo
 
 	// Delete the zone from Cloudflare if it exists
 	if zone.Status.ZoneID != "" {
-		log.Info("Deleting zone from Cloudflare", "zoneID", zone.Status.ZoneID)
+		log.Info("Deleting zone", "name", zone.Spec.Name)
 
 		_, err := r.CloudflareAPI.DeleteZone(ctx, zone.Status.ZoneID)
 		if err != nil {
@@ -242,7 +242,7 @@ func (r *CloudflareZoneReconciler) handleDeletion(ctx context.Context, zone *clo
 				log.Error(err, "Failed to delete zone from Cloudflare")
 				return ctrl.Result{}, err
 			}
-			log.Info("Zone not found in Cloudflare, assuming already deleted")
+			log.V(1).Info("Zone not found in Cloudflare, assuming already deleted")
 		} else {
 			log.Info("Successfully deleted zone from Cloudflare")
 		}
@@ -255,7 +255,7 @@ func (r *CloudflareZoneReconciler) handleDeletion(ctx context.Context, zone *clo
 		return ctrl.Result{}, err
 	}
 
-	log.Info("Finalizer removed, resource will be deleted")
+	log.V(1).Info("Finalizer removed, resource will be deleted")
 	return ctrl.Result{}, nil
 }
 

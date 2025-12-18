@@ -59,7 +59,7 @@ func (r *CloudflareRulesetReconciler) Reconcile(ctx context.Context, req ctrl.Re
 	ruleset := &cloudflarev1.CloudflareRuleset{}
 	if err := r.Get(ctx, req.NamespacedName, ruleset); err != nil {
 		if errors.IsNotFound(err) {
-			log.Info("CloudflareRuleset resource not found. Ignoring since object must be deleted")
+			log.V(1).Info("CloudflareZone resource not found. Ignoring since object must be deleted")
 			return ctrl.Result{}, nil
 		}
 		log.Error(err, "Failed to get CloudflareRuleset")
@@ -73,7 +73,7 @@ func (r *CloudflareRulesetReconciler) Reconcile(ctx context.Context, req ctrl.Re
 
 	// Add finalizer if not present
 	if !controllerutil.ContainsFinalizer(ruleset, cloudflareRulesetFinalizer) {
-		log.Info("Adding finalizer to CloudflareRuleset")
+		log.V(1).Info("Adding finalizer to CloudflareRuleset")
 		controllerutil.AddFinalizer(ruleset, cloudflareRulesetFinalizer)
 		if err := r.Update(ctx, ruleset); err != nil {
 			log.Error(err, "Failed to add finalizer")
@@ -122,7 +122,7 @@ func (r *CloudflareRulesetReconciler) reconcileRuleset(ctx context.Context, rule
 		rulesetID = ruleset.Status.RulesetID
 	} else {
 		// Create new ruleset
-		log.Info("Creating new ruleset", "name", rulesetName, "phase", ruleset.Spec.Phase, "zoneID", ruleset.Spec.ZoneID)
+		log.Info("Creating ruleset", "name", rulesetName, "phase", ruleset.Spec.Phase)
 		rulesetID, err = r.createRuleset(ctx, ruleset.Spec.ZoneID, rulesetName, ruleset.Spec.Description, string(ruleset.Spec.Phase), ruleset.Spec.Rules)
 	}
 
@@ -168,7 +168,7 @@ func (r *CloudflareRulesetReconciler) handleDeletion(ctx context.Context, rulese
 
 	// Delete the ruleset from Cloudflare if it exists
 	if ruleset.Status.RulesetID != "" {
-		log.Info("Deleting ruleset from Cloudflare", "rulesetID", ruleset.Status.RulesetID)
+		log.Info("Deleting ruleset", "name", ruleset.Spec.Name, "phase", ruleset.Spec.Phase)
 		if err := r.deleteRuleset(ctx, ruleset.Spec.ZoneID, ruleset.Status.RulesetID); err != nil {
 			log.Error(err, "Failed to delete ruleset from Cloudflare")
 			return ctrl.Result{}, err
@@ -183,7 +183,7 @@ func (r *CloudflareRulesetReconciler) handleDeletion(ctx context.Context, rulese
 		return ctrl.Result{}, err
 	}
 
-	log.Info("Finalizer removed, resource will be deleted")
+	log.V(1).Info("Finalizer removed, resource will be deleted")
 	return ctrl.Result{}, nil
 }
 

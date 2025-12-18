@@ -4,10 +4,10 @@ metadata:
   name: test-jeremygovi-cname
   namespace: default
 spec:
-  zoneId: "2b47528563f073167e2e466aa26f2ecf"
-  name: "test.jeremygovi.win"
+  domain: "jeremygovi.win"
+  name: "test"
   type: "CNAME"
-  content: "www.jeremygovi.win"
+  content: "www"
   ttl: 1
   proxied: false
-  comment: "cname test record to jeremygovi.win"
+  comment: "cname test record to www"

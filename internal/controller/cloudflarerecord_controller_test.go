@@ -39,8 +39,8 @@ var _ = Describe("CloudflareRecord Controller", func() {
 					Namespace: "default",
 				},
 				Spec: cloudflarev1.CloudflareRecordSpec{
-					ZoneID:  "test-zone-id",
-					Name:    "test.example.com",
+					Domain:  "example.com",
+					Name:    "test",
 					Type:    cloudflarev1.DNSRecordTypeA,
 					Content: "192.0.2.1",
 					TTL:     &ttl,
@@ -54,8 +54,8 @@ var _ = Describe("CloudflareRecord Controller", func() {
 
 			err := k8sClient.Get(ctx, recordLookupKey, createdRecord)
 			Expect(err).NotTo(HaveOccurred())
-			Expect(createdRecord.Spec.ZoneID).Should(Equal("test-zone-id"))
-			Expect(createdRecord.Spec.Name).Should(Equal("test.example.com"))
+			Expect(createdRecord.Spec.Domain).Should(Equal("example.com"))
+			Expect(createdRecord.Spec.Name).Should(Equal("test"))
 			Expect(createdRecord.Spec.Type).Should(Equal(cloudflarev1.DNSRecordTypeA))
 		})
 	})
