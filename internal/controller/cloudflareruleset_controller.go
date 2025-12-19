@@ -22,7 +22,8 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/cloudflare/cloudflare-go"
+	"github.com/cloudflare/cloudflare-go/v6"
+	"github.com/cloudflare/cloudflare-go/v6/rulesets"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -43,7 +44,7 @@ const (
 type CloudflareRulesetReconciler struct {
 	client.Client
 	Scheme          *runtime.Scheme
-	CloudflareAPI   *cloudflare.API
+	CloudflareAPI   *cloudflare.Client
 	RequeueDuration time.Duration
 }
 
@@ -237,30 +238,32 @@ func (r *CloudflareRulesetReconciler) SetupWithManager(mgr ctrl.Manager) error {
 // createRuleset creates a new ruleset in Cloudflare using the SDK
 func (r *CloudflareRulesetReconciler) createRuleset(ctx context.Context, zoneID, name, description, phase string, rules []cloudflarev1.Rule) (string, error) {
 	// Convert rules to SDK format
-	apiRules := make([]cloudflare.RulesetRule, len(rules))
+	apiRules := make([]rulesets.RulesetNewParamsRuleUnion, len(rules))
 	for i, rule := range rules {
-		apiRules[i] = cloudflare.RulesetRule{
-			Action:      rule.Action,
-			Expression:  rule.Expression,
-			Description: rule.Description,
-			Enabled:     rule.Enabled,
+		ruleParam := rulesets.RulesetNewParamsRule{
+			Action:      cloudflare.F(rulesets.RulesetNewParamsRulesAction(rule.Action)),
+			Expression:  cloudflare.F(rule.Expression),
+			Description: cloudflare.F(rule.Description),
+			Enabled:     cloudflare.F(*boolPtrToBool(rule.Enabled, true)),
 		}
 		if rule.ActionParameters != nil {
-			var params cloudflare.RulesetRuleActionParameters
+			var params interface{}
 			if err := json.Unmarshal(rule.ActionParameters.Raw, &params); err != nil {
 				return "", fmt.Errorf("failed to unmarshal action parameters: %w", err)
 			}
-			apiRules[i].ActionParameters = &params
+			ruleParam.ActionParameters = cloudflare.F(params)
 		}
+		apiRules[i] = ruleParam
 	}
 
 	// Create ruleset using SDK
-	result, err := r.CloudflareAPI.CreateRuleset(ctx, cloudflare.ZoneIdentifier(zoneID), cloudflare.CreateRulesetParams{
-		Name:        name,
-		Description: description,
-		Kind:        "zone",
-		Phase:       phase,
-		Rules:       apiRules,
+	result, err := r.CloudflareAPI.Rulesets.New(ctx, rulesets.RulesetNewParams{
+		ZoneID:      cloudflare.F(zoneID),
+		Name:        cloudflare.F(name),
+		Description: cloudflare.F(description),
+		Kind:        cloudflare.F(rulesets.KindZone),
+		Phase:       cloudflare.F(rulesets.Phase(phase)),
+		Rules:       cloudflare.F(apiRules),
 	})
 	if err != nil {
 		return "", fmt.Errorf("failed to create ruleset: %w", err)
@@ -272,28 +275,29 @@ func (r *CloudflareRulesetReconciler) createRuleset(ctx context.Context, zoneID,
 // updateRuleset updates an existing ruleset in Cloudflare using the SDK
 func (r *CloudflareRulesetReconciler) updateRuleset(ctx context.Context, zoneID, rulesetID, name, description, phase string, rules []cloudflarev1.Rule) error {
 	// Convert rules to SDK format
-	apiRules := make([]cloudflare.RulesetRule, len(rules))
+	apiRules := make([]rulesets.RulesetUpdateParamsRuleUnion, len(rules))
 	for i, rule := range rules {
-		apiRules[i] = cloudflare.RulesetRule{
-			Action:      rule.Action,
-			Expression:  rule.Expression,
-			Description: rule.Description,
-			Enabled:     rule.Enabled,
+		ruleParam := rulesets.RulesetUpdateParamsRule{
+			Action:      cloudflare.F(rulesets.RulesetUpdateParamsRulesAction(rule.Action)),
+			Expression:  cloudflare.F(rule.Expression),
+			Description: cloudflare.F(rule.Description),
+			Enabled:     cloudflare.F(*boolPtrToBool(rule.Enabled, true)),
 		}
 		if rule.ActionParameters != nil {
-			var params cloudflare.RulesetRuleActionParameters
+			var params interface{}
 			if err := json.Unmarshal(rule.ActionParameters.Raw, &params); err != nil {
 				return fmt.Errorf("failed to unmarshal action parameters: %w", err)
 			}
-			apiRules[i].ActionParameters = &params
+			ruleParam.ActionParameters = cloudflare.F(params)
 		}
+		apiRules[i] = ruleParam
 	}
 
 	// Update ruleset using SDK
-	_, err := r.CloudflareAPI.UpdateRuleset(ctx, cloudflare.ZoneIdentifier(zoneID), cloudflare.UpdateRulesetParams{
-		ID:          rulesetID,
-		Description: description,
-		Rules:       apiRules,
+	_, err := r.CloudflareAPI.Rulesets.Update(ctx, rulesetID, rulesets.RulesetUpdateParams{
+		ZoneID:      cloudflare.F(zoneID),
+		Description: cloudflare.F(description),
+		Rules:       cloudflare.F(apiRules),
 	})
 	if err != nil {
 		return fmt.Errorf("failed to update ruleset: %w", err)
@@ -304,7 +308,9 @@ func (r *CloudflareRulesetReconciler) updateRuleset(ctx context.Context, zoneID,
 
 // deleteRuleset deletes a ruleset from Cloudflare using the SDK
 func (r *CloudflareRulesetReconciler) deleteRuleset(ctx context.Context, zoneID, rulesetID string) error {
-	err := r.CloudflareAPI.DeleteRuleset(ctx, cloudflare.ZoneIdentifier(zoneID), rulesetID)
+	err := r.CloudflareAPI.Rulesets.Delete(ctx, rulesetID, rulesets.RulesetDeleteParams{
+		ZoneID: cloudflare.F(zoneID),
+	})
 	if err != nil {
 		return fmt.Errorf("failed to delete ruleset: %w", err)
 	}

@@ -9,5 +9,5 @@ spec:
   type: "A"
   content: "185.214.53.1"
   ttl: 60
-  proxied: false
+  proxied: true
   comment: "test A record"

@@ -21,7 +21,9 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/cloudflare/cloudflare-go"
+	"github.com/cloudflare/cloudflare-go/v6"
+	"github.com/cloudflare/cloudflare-go/v6/dns"
+	"github.com/cloudflare/cloudflare-go/v6/zones"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -44,7 +46,7 @@ const (
 type CloudflareRecordReconciler struct {
 	client.Client
 	Scheme          *runtime.Scheme
-	CloudflareAPI   *cloudflare.API
+	CloudflareAPI   *cloudflare.Client
 	RequeueDuration time.Duration
 }
 
@@ -124,36 +126,26 @@ func (r *CloudflareRecordReconciler) reconcileDNSRecord(ctx context.Context, rec
 	// Build full DNS name
 	fullName := r.buildFullDNSName(record.Spec.Name, record.Spec.Domain)
 
-	// Prepare DNS record parameters
-	recordParams := cloudflare.CreateDNSRecordParams{
-		Name:     fullName,
-		Type:     string(record.Spec.Type),
-		Content:  record.Spec.Content,
-		TTL:      intPtrToInt(record.Spec.TTL, 1),
-		Proxied:  boolPtrToBool(record.Spec.Proxied, false),
-		Priority: uint16PtrToPtr(record.Spec.Priority),
-		Comment:  record.Spec.Comment,
-	}
-
 	var recordID string
-	var err error
 
 	if record.Status.RecordID != "" {
 		// Update existing record
 		log.Info("Updating existing DNS record", "recordID", record.Status.RecordID, "zoneID", zoneID)
 
-		updateParams := cloudflare.UpdateDNSRecordParams{
-			ID:       record.Status.RecordID,
-			Name:     recordParams.Name,
-			Type:     recordParams.Type,
-			Content:  recordParams.Content,
-			TTL:      recordParams.TTL,
-			Proxied:  recordParams.Proxied,
-			Priority: recordParams.Priority,
-			Comment:  stringToPtr(recordParams.Comment),
+		bodyNew, err := r.buildDNSBody(record, fullName)
+		if err != nil {
+			return r.handleReconcileError(ctx, record, err)
+		}
+		// buildDNSBody returns a RecordNewParamsBodyUnion; assert underlying value implements the Update union
+		bodyUpdate, ok := bodyNew.(dns.RecordUpdateParamsBodyUnion)
+		if !ok {
+			return r.handleReconcileError(ctx, record, fmt.Errorf("internal: DNS body type mismatch for update"))
 		}
 
-		_, err = r.CloudflareAPI.UpdateDNSRecord(ctx, cloudflare.ZoneIdentifier(zoneID), updateParams)
+		_, err = r.CloudflareAPI.DNS.Records.Update(ctx, record.Status.RecordID, dns.RecordUpdateParams{
+			ZoneID: cloudflare.F(zoneID),
+			Body:   bodyUpdate,
+		})
 		if err != nil {
 			return r.handleReconcileError(ctx, record, fmt.Errorf("failed to update DNS record: %w", err))
 		}
@@ -162,7 +154,15 @@ func (r *CloudflareRecordReconciler) reconcileDNSRecord(ctx context.Context, rec
 		// Create new record
 		log.Info("Creating new DNS record", "name", record.Spec.Name, "type", record.Spec.Type, "zoneID", zoneID)
 
-		response, err := r.CloudflareAPI.CreateDNSRecord(ctx, cloudflare.ZoneIdentifier(zoneID), recordParams)
+		body, err := r.buildDNSBody(record, fullName)
+		if err != nil {
+			return r.handleReconcileError(ctx, record, err)
+		}
+
+		response, err := r.CloudflareAPI.DNS.Records.New(ctx, dns.RecordNewParams{
+			ZoneID: cloudflare.F(zoneID),
+			Body:   body,
+		})
 		if err != nil {
 			return r.handleReconcileError(ctx, record, fmt.Errorf("failed to create DNS record: %w", err))
 		}
@@ -209,7 +209,9 @@ func (r *CloudflareRecordReconciler) handleDeletion(ctx context.Context, record 
 	if record.Status.RecordID != "" && record.Status.ZoneID != "" {
 		log.Info("Deleting DNS record", "domain", record.Spec.Domain, "name", record.Spec.Name)
 
-		err := r.CloudflareAPI.DeleteDNSRecord(ctx, cloudflare.ZoneIdentifier(record.Status.ZoneID), record.Status.RecordID)
+		_, err := r.CloudflareAPI.DNS.Records.Delete(ctx, record.Status.RecordID, dns.RecordDeleteParams{
+			ZoneID: cloudflare.F(record.Status.ZoneID),
+		})
 		if err != nil {
 			// Check if record already deleted (404)
 			if !isNotFoundError(err) {
@@ -283,23 +285,22 @@ func (r *CloudflareRecordReconciler) SetupWithManager(mgr ctrl.Manager) error {
 // resolveZoneID looks up the Cloudflare Zone ID for a given domain
 func (r *CloudflareRecordReconciler) resolveZoneID(ctx context.Context, domain string) (string, error) {
 	// List zones and find the one matching the domain
-	zones, err := r.CloudflareAPI.ListZones(ctx, domain)
-	if err != nil {
-		return "", fmt.Errorf("failed to list zones: %w", err)
-	}
+	iter := r.CloudflareAPI.Zones.ListAutoPaging(ctx, zones.ZoneListParams{
+		Name: cloudflare.F(domain),
+	})
 
-	if len(zones) == 0 {
-		return "", fmt.Errorf("no zone found for domain %s", domain)
-	}
-
-	// Find exact match
-	for _, zone := range zones {
+	for iter.Next() {
+		zone := iter.Current()
 		if zone.Name == domain {
 			return zone.ID, nil
 		}
 	}
 
-	return "", fmt.Errorf("zone not found for domain %s", domain)
+	if err := iter.Err(); err != nil {
+		return "", fmt.Errorf("failed to list zones: %w", err)
+	}
+
+	return "", fmt.Errorf("no zone found for domain %s", domain)
 }
 
 // buildFullDNSName constructs the full DNS record name from the subdomain and domain
@@ -309,4 +310,47 @@ func (r *CloudflareRecordReconciler) buildFullDNSName(name, domain string) strin
 		return domain
 	}
 	return name + "." + domain
+}
+
+// buildDNSBody construit le body adapté pour la création/mise à jour d'un enregistrement DNS
+func (r *CloudflareRecordReconciler) buildDNSBody(record *cloudflarev1.CloudflareRecord, fullName string) (dns.RecordNewParamsBodyUnion, error) {
+	switch record.Spec.Type {
+	case "A":
+		return dns.ARecordParam{
+			Name:    cloudflare.F(fullName),
+			Type:    cloudflare.F(dns.ARecordTypeA),
+			Content: cloudflare.F(record.Spec.Content),
+			TTL:     cloudflare.F(dns.TTL(intPtrToInt(record.Spec.TTL, 1))),
+			Proxied: cloudflare.F(*boolPtrToBool(record.Spec.Proxied, false)),
+			Comment: cloudflare.F(record.Spec.Comment),
+		}, nil
+	case "AAAA":
+		return dns.AAAARecordParam{
+			Name:    cloudflare.F(fullName),
+			Type:    cloudflare.F(dns.AAAARecordTypeAAAA),
+			Content: cloudflare.F(record.Spec.Content),
+			TTL:     cloudflare.F(dns.TTL(intPtrToInt(record.Spec.TTL, 1))),
+			Proxied: cloudflare.F(*boolPtrToBool(record.Spec.Proxied, false)),
+			Comment: cloudflare.F(record.Spec.Comment),
+		}, nil
+	case "CNAME":
+		return dns.CNAMERecordParam{
+			Name:    cloudflare.F(fullName),
+			Type:    cloudflare.F(dns.CNAMERecordTypeCNAME),
+			Content: cloudflare.F(record.Spec.Content),
+			TTL:     cloudflare.F(dns.TTL(intPtrToInt(record.Spec.TTL, 1))),
+			Proxied: cloudflare.F(*boolPtrToBool(record.Spec.Proxied, false)),
+			Comment: cloudflare.F(record.Spec.Comment),
+		}, nil
+	case "TXT":
+		return dns.TXTRecordParam{
+			Name:    cloudflare.F(fullName),
+			Type:    cloudflare.F(dns.TXTRecordTypeTXT),
+			Content: cloudflare.F(record.Spec.Content),
+			TTL:     cloudflare.F(dns.TTL(intPtrToInt(record.Spec.TTL, 1))),
+			Comment: cloudflare.F(record.Spec.Comment),
+		}, nil
+	default:
+		return nil, fmt.Errorf("unsupported DNS record type: %s", record.Spec.Type)
+	}
 }
