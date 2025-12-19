@@ -1,3 +1,11 @@
+# [1.2.0](https://github.com/jeremygovi/cloudflare-kubernetes-operator/compare/v1.1.0...v1.2.0) (2025-12-19)
+
+
+### Features
+
+* bump all deps + use cloudflare api V6 ([3962769](https://github.com/jeremygovi/cloudflare-kubernetes-operator/commit/3962769ef3add6d6a63059268be69c31d24332ee))
+* bump all golang deps ([4ca9142](https://github.com/jeremygovi/cloudflare-kubernetes-operator/commit/4ca914251c7b464e15402719d1bea6f87eea06c7))
+
 # [1.1.0](https://github.com/jeremygovi/cloudflare-kubernetes-operator/compare/v1.0.9...v1.1.0) (2025-12-18)
 
 
