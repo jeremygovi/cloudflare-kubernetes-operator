@@ -21,7 +21,8 @@ import (
 	"os"
 	"time"
 
-	"github.com/cloudflare/cloudflare-go"
+	"github.com/cloudflare/cloudflare-go/v6"
+	"github.com/cloudflare/cloudflare-go/v6/option"
 	"go.uber.org/zap/zapcore"
 	_ "k8s.io/client-go/plugin/pkg/client/auth"
 
@@ -119,11 +120,9 @@ func main() {
 		os.Exit(1)
 	}
 
-	cloudflareAPI, err := cloudflare.NewWithAPIToken(apiToken)
-	if err != nil {
-		setupLog.Error(err, "unable to create Cloudflare API client")
-		os.Exit(1)
-	}
+	cloudflareAPI := cloudflare.NewClient(
+		option.WithAPIToken(apiToken),
+	)
 
 	// Optional: Log account ID if provided
 	if accountID := os.Getenv("CLOUDFLARE_ACCOUNT_ID"); accountID != "" {

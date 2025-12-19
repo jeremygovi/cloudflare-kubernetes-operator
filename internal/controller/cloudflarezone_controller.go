@@ -21,7 +21,8 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/cloudflare/cloudflare-go"
+	"github.com/cloudflare/cloudflare-go/v6"
+	"github.com/cloudflare/cloudflare-go/v6/zones"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -42,7 +43,7 @@ const (
 type CloudflareZoneReconciler struct {
 	client.Client
 	Scheme          *runtime.Scheme
-	CloudflareAPI   *cloudflare.API
+	CloudflareAPI   *cloudflare.Client
 	RequeueDuration time.Duration
 	AccountID       string // Default account ID from environment variable
 }
@@ -108,14 +109,16 @@ func (r *CloudflareZoneReconciler) reconcileZone(ctx context.Context, zone *clou
 	}
 
 	var zoneID string
-	var cfZone cloudflare.Zone
+	var cfZone *zones.Zone
 	var err error
 
 	if zone.Status.ZoneID != "" {
 		// Check if zone exists and update if needed
 		log.V(1).Info("Checking existing zone", "zoneID", zone.Status.ZoneID)
 
-		cfZone, err = r.CloudflareAPI.ZoneDetails(ctx, zone.Status.ZoneID)
+		cfZone, err = r.CloudflareAPI.Zones.Get(ctx, zones.ZoneGetParams{
+			ZoneID: cloudflare.F(zone.Status.ZoneID),
+		})
 		if err != nil {
 			if isNotFoundError(err) {
 				// Zone doesn't exist in Cloudflare anymore, need to recreate
@@ -130,10 +133,10 @@ func (r *CloudflareZoneReconciler) reconcileZone(ctx context.Context, zone *clou
 
 			paused := boolPtrToBool(zone.Spec.Paused, false)
 			if cfZone.Paused != *paused {
-				zoneOptions := cloudflare.ZoneOptions{
-					Paused: paused,
-				}
-				cfZone, err = r.CloudflareAPI.EditZone(ctx, zone.Status.ZoneID, zoneOptions)
+				cfZone, err = r.CloudflareAPI.Zones.Edit(ctx, zones.ZoneEditParams{
+					ZoneID: cloudflare.F(zone.Status.ZoneID),
+					Paused: cloudflare.F(*paused),
+				})
 				if err != nil {
 					return r.handleReconcileError(ctx, zone, fmt.Errorf("failed to update zone: %w", err))
 				}
@@ -156,14 +159,18 @@ func (r *CloudflareZoneReconciler) reconcileZone(ctx context.Context, zone *clou
 
 		log.Info("Creating new zone", "name", zone.Spec.Name, "accountID", accountID)
 
-		jumpStart := boolPtrToBool(zone.Spec.JumpStart, false)
 		zoneType := string(zone.Spec.Type)
 		if zoneType == "" {
 			zoneType = string(cloudflarev1.ZoneTypeFull)
 		}
 
-		account := cloudflare.Account{ID: accountID}
-		cfZone, err = r.CloudflareAPI.CreateZone(ctx, zone.Spec.Name, *jumpStart, account, zoneType)
+		cfZone, err = r.CloudflareAPI.Zones.New(ctx, zones.ZoneNewParams{
+			Name: cloudflare.F(zone.Spec.Name),
+			Account: cloudflare.F(zones.ZoneNewParamsAccount{
+				ID: cloudflare.F(accountID),
+			}),
+			Type: cloudflare.F(zones.Type(zoneType)),
+		})
 		if err != nil {
 			return r.handleReconcileError(ctx, zone, fmt.Errorf("failed to create zone: %w", err))
 		}
@@ -171,10 +178,10 @@ func (r *CloudflareZoneReconciler) reconcileZone(ctx context.Context, zone *clou
 
 		// Apply paused setting if specified
 		if zone.Spec.Paused != nil && *zone.Spec.Paused {
-			zoneOptions := cloudflare.ZoneOptions{
-				Paused: zone.Spec.Paused,
-			}
-			cfZone, err = r.CloudflareAPI.EditZone(ctx, zoneID, zoneOptions)
+			cfZone, err = r.CloudflareAPI.Zones.Edit(ctx, zones.ZoneEditParams{
+				ZoneID: cloudflare.F(zoneID),
+				Paused: cloudflare.F(*zone.Spec.Paused),
+			})
 			if err != nil {
 				log.Error(err, "Failed to pause zone, but zone was created")
 			}
@@ -184,9 +191,9 @@ func (r *CloudflareZoneReconciler) reconcileZone(ctx context.Context, zone *clou
 	// Update status
 	now := metav1.NewTime(time.Now())
 	zone.Status.ZoneID = zoneID
-	zone.Status.Status = cfZone.Status
+	zone.Status.Status = string(cfZone.Status)
 	zone.Status.NameServers = cfZone.NameServers
-	zone.Status.OriginalNameServers = cfZone.OriginalNS
+	zone.Status.OriginalNameServers = cfZone.OriginalNameServers
 	zone.Status.VerificationKey = cfZone.VerificationKey
 	zone.Status.ObservedGeneration = zone.Generation
 	zone.Status.LastSync = &now
@@ -235,7 +242,9 @@ func (r *CloudflareZoneReconciler) handleDeletion(ctx context.Context, zone *clo
 	if zone.Status.ZoneID != "" {
 		log.Info("Deleting zone", "name", zone.Spec.Name)
 
-		_, err := r.CloudflareAPI.DeleteZone(ctx, zone.Status.ZoneID)
+		_, err := r.CloudflareAPI.Zones.Delete(ctx, zones.ZoneDeleteParams{
+			ZoneID: cloudflare.F(zone.Status.ZoneID),
+		})
 		if err != nil {
 			// Check if zone already deleted (404)
 			if !isNotFoundError(err) {
